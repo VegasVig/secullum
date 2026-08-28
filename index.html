@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Treinamento Secullum - Vegas Vigilância</title>
+<title>Treinamento Secullum — Vegas Vigilância</title>
 <style>
   :root{
     --bg:#0d0f14; --card:#161a22; --card2:#1c212b; --line:#2a3140;
@@ -47,6 +47,17 @@
   .btn:disabled{opacity:.5;cursor:not-allowed}
   .btnrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
   .btnrow .btn{flex:1;min-width:150px}
+
+  /* Barra de módulos */
+  .modbar{border-bottom:1px solid var(--line);background:#0f1219;position:sticky;top:83px;z-index:15}
+  .modbar .inner{max-width:760px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:0 8px;-ms-overflow-style:none;scrollbar-width:none}
+  .modbar .inner::-webkit-scrollbar{display:none}
+  .modtab{flex:none;display:flex;align-items:center;gap:7px;padding:13px 14px;font-size:13px;color:var(--muted);white-space:nowrap;border-bottom:2px solid transparent;cursor:default;transition:.15s}
+  .modtab .mi{width:16px;height:16px;opacity:.7}
+  .modtab.active{color:var(--amber);border-bottom-color:var(--amber);font-weight:700}
+  .modtab.done{color:#cdd5e2}
+  .modtab.done .check{color:var(--greenline);font-weight:800}
+  @media(max-width:560px){ .modtab{font-size:12px;padding:11px 10px} .modbar{top:78px} }
 
   .progress{height:4px;background:var(--line);border-radius:4px;overflow:hidden;margin:24px 0 6px}
   .progress > i{display:block;height:100%;background:var(--amber);width:0;transition:.3s}
@@ -121,6 +132,11 @@
   </div>
 </header>
 
+<!-- BARRA DE MÓDULOS -->
+<div class="modbar hide" id="modbar">
+  <div class="inner" id="modbarInner"></div>
+</div>
+
 <div class="wrap">
 
   <!-- TELA INICIAL -->
@@ -131,7 +147,7 @@
       <p>Teste seu preparo para orientar colaboradores nas situações mais comuns do sistema — do registro de ponto às regras da CLT.</p>
       <div class="stats">
         <div class="stat"><div class="n">5</div><div class="l">Módulos</div></div>
-        <div class="stat"><div class="n">21</div><div class="l">Questões</div></div>
+        <div class="stat"><div class="n">25</div><div class="l">Questões</div></div>
         <div class="stat"><div class="n">~20</div><div class="l">Minutos</div></div>
       </div>
 
@@ -159,7 +175,29 @@
     <button class="btn" id="nextBtn" disabled>Próxima questão &rarr;</button>
   </section>
 
-  <!-- TELA RESULTADO -->
+  <!-- TELA RESULTADO DO MÓDULO (intermediária) -->
+  <section id="screen-module" class="hide">
+    <div class="progress"><i id="mbar"></i></div>
+    <div class="pmeta"><span id="mpnum"></span><span id="mphits"></span></div>
+    <div class="result">
+      <div class="ring">
+        <svg width="150" height="150">
+          <circle cx="75" cy="75" r="66" stroke="#2a3140" stroke-width="12" fill="none"/>
+          <circle id="mringfg" cx="75" cy="75" r="66" stroke="#f5a623" stroke-width="12" fill="none"
+                  stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="414.7"/>
+        </svg>
+        <div class="pct"><b id="mpct">0%</b><span id="mfrac">0/5 acertos</span></div>
+      </div>
+      <h2 id="mtitle"></h2>
+      <p id="mmsg"></p>
+      <div class="dots" id="mdots" style="display:flex;gap:8px;justify-content:center;margin:6px 0 22px"></div>
+      <div class="btnrow" style="margin-top:4px">
+        <button class="btn" id="mNextBtn" style="flex:1">Próximo módulo &rarr;</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TELA RESULTADO FINAL -->
   <section id="screen-result" class="hide">
     <div class="result">
       <div class="ring">
@@ -168,14 +206,11 @@
           <circle id="ringfg" cx="75" cy="75" r="66" stroke="#f5a623" stroke-width="12" fill="none"
                   stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="414.7"/>
         </svg>
-        <div class="pct"><b id="rpct">0%</b><span id="rfrac">0/21 acertos</span></div>
+        <div class="pct"><b id="rpct">0%</b><span id="rfrac">0/25 acertos</span></div>
       </div>
       <h2 id="rtitle">Treinamento concluído</h2>
       <p id="rmsg"></p>
       <div class="sending" id="sending">Enviando suas respostas ao RH...</div>
-      <div class="btnrow" style="margin-top:20px">
-        <button class="btn ghost" id="retryBtn">Refazer treinamento</button>
-      </div>
     </div>
   </section>
 
@@ -210,17 +245,53 @@
 <script>
 // ====== CONFIGURAÇÃO ======
 // Cole aqui a URL do seu Google Apps Script (Implantar > Novo > App da Web)
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMO29KJm5dGkSZeKo6H31kid2ec-v_DBx0MJtY4YSKpdMixkdYdu_LpoERRDN__9PP/exec";
+const APPS_SCRIPT_URL = "COLE_AQUI_A_URL_DO_APPS_SCRIPT";
 const ADMIN_PASS = "Vegas4747@";
 const RH_EMAIL = "gerencia.rh@vegasvigilancia.com.br";
 // ==========================
 
-const QUESTOES = [{"id": 0, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "Um colaborador chega ao final do turno dizendo que esqueceu de bater o ponto de entrada pela manhã.", "pergunta": "Qual é o procedimento correto para o supervisor?", "opcoes": ["Ignorar — é responsabilidade exclusiva do colaborador", "Registrar o ajuste no sistema com o horário real e a justificativa", "Descontar automaticamente o dia completo de trabalho", "Aguardar o fechamento do mês para resolver com o RH"], "correta": 1, "explicacao": "O supervisor deve lançar o ajuste no Secullum informando o horário real e a justificativa. O sistema registra todo o histórico de alterações, garantindo transparência e conformidade com a Portaria 671, que exige rastreabilidade das marcações."}, {"id": 1, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "O reconhecimento facial falha repetidamente para o mesmo colaborador durante o turno.", "pergunta": "Qual é o primeiro passo que o supervisor deve tomar?", "opcoes": ["Substituir o equipamento imediatamente", "Dispensar o colaborador do registro de ponto por tempo indeterminado", "Verificar e, se necessário, atualizar o cadastro biométrico do colaborador no sistema", "Registrar uma reclamação formal no suporte sem investigar a causa"], "correta": 2, "explicacao": "Mudanças no rosto (barba, iluminação, óculos) podem afetar o reconhecimento. O supervisor deve verificar o cadastro biométrico no Secullum e solicitar recadastramento se necessário. Enquanto resolve, o colaborador pode utilizar registro alternativo autorizado pelo supervisor."}, {"id": 2, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "Um colaborador registrou saída no horário do intervalo, mas não registrou o retorno. O sistema indicou saída antecipada.", "pergunta": "Como o supervisor deve corrigir essa inconsistência?", "opcoes": ["Considerar que o colaborador saiu mais cedo e descontar as horas sem verificar", "Solicitar que o colaborador ajuste pelo app com justificativa, ou fazer o ajuste diretamente no sistema", "Aguardar o fechamento mensal sem intervir", "Aplicar advertência imediata sem apurar os fatos"], "correta": 1, "explicacao": "O Secullum permite ajustes de ponto com registro obrigatório de justificativa, mantendo a trilha de auditoria exigida pela legislação. O ajuste pode ser solicitado pelo colaborador via app ou feito diretamente pelo supervisor — em ambos os casos fica documentado."}, {"id": 3, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "A Portaria 671 do Ministério do Trabalho exige que o colaborador possa consultar suas marcações de ponto.", "pergunta": "Como o Secullum garante esse direito?", "opcoes": ["Enviando cópia impressa do espelho de ponto pelo correio todo mês", "Por meio da Central do Funcionário no aplicativo, com acesso em tempo real ao espelho de ponto", "Somente mediante solicitação formal ao RH, com prazo de 5 dias úteis", "Através de e-mail semanal com relatório de horas"], "correta": 1, "explicacao": "A Central do Funcionário do Secullum oferece ao colaborador acesso em tempo real ao espelho de ponto pelo app, cumprindo a Portaria 671 sem burocracia. O supervisor deve garantir que todos os colaboradores estejam cadastrados e saibam usar o aplicativo."}, {"id": 4, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "Um colaborador reclama que trabalhou horas extras na semana passada e não recebeu o pagamento adicional.", "pergunta": "Qual deve ser o primeiro passo do supervisor?", "opcoes": ["Negar imediatamente, dizendo que o sistema não comete erros", "Verificar o espelho de ponto do colaborador no Secullum para confirmar as horas registradas", "Orientar o colaborador a resolver diretamente com o jurídico", "Aguardar o RH tomar a iniciativa de investigar"], "correta": 1, "explicacao": "O supervisor deve consultar o espelho de ponto do colaborador no Secullum para verificar se as horas extras foram registradas. Com os dados confirmados, encaminha ao RH para os acertos na folha. Agir com base nos registros do sistema evita conflitos e garante decisões justas."}, {"id": 5, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "Um colaborador recém-contratado diz que não consegue acessar o aplicativo do Secullum.", "pergunta": "Qual é o primeiro passo do supervisor para resolver?", "opcoes": ["Dizer que o colaborador precisa de um celular mais moderno", "Verificar se o colaborador foi cadastrado no sistema e se recebeu as credenciais de acesso", "Entrar em contato com a operadora de celular do colaborador", "Aguardar o TI resolver sem interferir"], "correta": 1, "explicacao": "Sem cadastro ativo no Secullum e credenciais enviadas, nenhum acesso é possível. O supervisor deve confirmar com o RH que o colaborador foi cadastrado e recebeu o usuário e senha. Somente depois, se o acesso ainda falhar, verificar questões técnicas do dispositivo."}, {"id": 6, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "Um colaborador percebeu um erro no seu registro de ponto e quer solicitar uma correção.", "pergunta": "Qual é o canal correto dentro do Secullum para essa solicitação?", "opcoes": ["Mensagem de WhatsApp para o supervisor, sem registro formal", "Pelo app da Central do Funcionário, onde a solicitação é registrada e vai para aprovação do supervisor", "E-mail direto ao RH, sem necessidade de usar o sistema", "Papel físico entregue ao gestor no fim do mês"], "correta": 1, "explicacao": "A solicitação de ajuste via app da Central do Funcionário cria um registro formal com data, hora e justificativa, protegendo tanto o colaborador quanto a empresa. O supervisor recebe a notificação e pode aprovar ou recusar com justificativa, mantendo a trilha de auditoria."}, {"id": 7, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "A empresa enviou um contrato digital para o colaborador assinar pelo app, mas ele não sabe como proceder.", "pergunta": "O que o supervisor deve orientar?", "opcoes": ["Solicitar que o colaborador vá presencialmente à sede para assinar o físico", "Acessar o app Secullum, ir à seção de documentos pendentes e realizar a assinatura eletrônica", "Informar que assinatura eletrônica não tem validade jurídica no Brasil", "Dizer que a assinatura é opcional"], "correta": 1, "explicacao": "A assinatura eletrônica pelo Secullum tem plena validade jurídica no Brasil (Lei 14.063/2020 e MP 2.200-2/2001). O supervisor deve orientar o colaborador a acessar \"Documentos pendentes\" no app e concluir a assinatura. O sistema registra identidade, data e hora do ato."}, {"id": 8, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "Um colaborador quer saber quantas horas extras acumulou neste mês.", "pergunta": "Onde essa informação está disponível?", "opcoes": ["Somente solicitando relatório por e-mail ao RH, com prazo de 3 dias úteis", "No relatório impresso entregue pelo supervisor ao final do mês", "No espelho de ponto disponível na Central do Funcionário no aplicativo, em tempo real", "Essa informação não é disponibilizada ao colaborador"], "correta": 2, "explicacao": "O colaborador acessa seu espelho de ponto em tempo real pela Central do Funcionário, onde vê todas as marcações e o saldo de horas. Esse acesso é garantido pela Portaria 671. O supervisor deve reforçar esse canal para evitar dúvidas e consultas desnecessárias ao RH."}, {"id": 9, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "Um colaborador trocou de celular e agora diz que perdeu acesso ao aplicativo Secullum.", "pergunta": "Como o supervisor deve orientar a recuperação do acesso?", "opcoes": ["O colaborador precisa adquirir um celular igual ao anterior", "Baixar o app no novo celular e fazer login com as mesmas credenciais (usuário e senha)", "Aguardar 30 dias para o sistema atualizar o dispositivo automaticamente", "Criar um novo cadastro do zero, pois o histórico fica vinculado ao celular"], "correta": 1, "explicacao": "As credenciais do Secullum estão vinculadas ao usuário, não ao aparelho. Basta instalar o app no novo celular e fazer login normalmente. Todo o histórico, documentos e dados ficam na nuvem e são acessíveis de qualquer dispositivo."}, {"id": 10, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Ao analisar o sistema, você percebe que um colaborador está a 60 dias de perder o período aquisitivo de férias sem programação definida.", "pergunta": "O que o supervisor deve fazer?", "opcoes": ["Aguardar o colaborador perceber por conta própria", "Verificar no Secullum e comunicar o RH para programar as férias dentro do prazo legal", "Ignorar — controle de férias é responsabilidade exclusiva do RH", "Cancelar automaticamente as férias para o período seguinte"], "correta": 1, "explicacao": "Férias não concedidas no prazo legal geram multa de 1/3 sobre o valor. O Secullum sinaliza vencimentos próximos, mas o supervisor tem papel ativo em garantir que a equipe tire férias a tempo. Acione o RH assim que identificar o risco."}, {"id": 11, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Um colaborador quer saber quando deverá ser notificado formalmente sobre o início das suas férias.", "pergunta": "Qual é o prazo mínimo de antecedência para o aviso de férias, segundo a CLT?", "opcoes": ["15 dias", "7 dias", "30 dias", "60 dias"], "correta": 2, "explicacao": "A CLT exige aviso de férias com no mínimo 30 dias de antecedência (art. 135). O descumprimento desse prazo pode gerar obrigação de pagar férias em dobro. O Secullum ajuda o supervisor a controlar essas datas automaticamente, evitando exposição trabalhista."}, {"id": 12, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Um colaborador solicita fracionar seus 30 dias de férias em três períodos distintos ao longo do ano.", "pergunta": "O supervisor pode aprovar essa solicitação?", "opcoes": ["Não — a CLT exige um único período contínuo de férias", "Sim — desde que o colaborador concorde e um dos períodos seja de no mínimo 14 dias corridos", "Sim — sem nenhuma restrição de prazo mínimo para cada período", "Somente com autorização por escrito da diretoria e do sindicato"], "correta": 1, "explicacao": "A Reforma Trabalhista (Lei 13.467/2017) permite fracionamento em até 3 períodos, desde que haja acordo e que um deles seja de no mínimo 14 dias corridos, não podendo os demais ser inferiores a 5 dias. O Secullum suporta o controle fracionado automaticamente."}, {"id": 13, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Um colaborador com 30 dias de férias a gozar quer \"vender\" 10 dias em dinheiro (abono pecuniário).", "pergunta": "Essa solicitação pode ser aprovada?", "opcoes": ["Não — a venda de dias de férias não é permitida pela CLT", "Sim — o colaborador pode converter em abono até 1/3 do período de férias", "Sim — pode converter qualquer quantidade de dias", "Somente se houver cláusula específica na convenção coletiva"], "correta": 1, "explicacao": "A CLT permite ao colaborador solicitar o abono de até 1/3 das férias (art. 143). Com 30 dias de férias, pode converter até 10 dias em dinheiro. O pedido deve ser feito até 15 dias antes do término do período aquisitivo. O Secullum automatiza esse cálculo na folha de pagamento."}, {"id": 14, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Um colaborador afirma não ter recebido um documento importante que o RH diz ter enviado pelo sistema.", "pergunta": "Como verificar quem está correto?", "opcoes": ["Acreditar no colaborador e reenviar imediatamente sem verificar", "Consultar no Secullum o status do documento: se foi enviado, visualizado ou assinado, com data e hora", "Solicitar que o colaborador procure na caixa de spam do e-mail pessoal", "Não é possível verificar — o sistema não registra o recebimento"], "correta": 1, "explicacao": "O Secullum mantém registro completo de todos os documentos: data de envio, leitura e assinatura. O supervisor pode apresentar esses logs ao colaborador, resolvendo a divergência com evidências objetivas e evitando conflitos."}, {"id": 15, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "Um colaborador questiona se o contrato assinado pelo app tem a mesma validade de um contrato em papel com assinatura física.", "pergunta": "O que o supervisor deve responder?", "opcoes": ["Que documentos eletrônicos têm validade reduzida e precisam ser impressos depois", "Que assinatura eletrônica não é aceita em contratos trabalhistas", "Que a assinatura eletrônica tem plena validade jurídica, com identificação, data e hora registradas", "Que a validade depende de validação manual pelo departamento jurídico"], "correta": 2, "explicacao": "As assinaturas eletrônicas no Secullum têm plena validade jurídica no Brasil (MP 2.200-2/2001, Lei 14.063/2020). O sistema registra a identidade do signatário, o dispositivo, a data e a hora — criando uma trilha de auditoria robusta, aceita pela Justiça do Trabalho."}, {"id": 16, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "O supervisor precisa verificar quais colaboradores ainda não assinaram o novo termo de ciência sobre a política de horas extras.", "pergunta": "Onde encontrar essa informação no Secullum?", "opcoes": ["O sistema não armazena esse histórico", "Na gestão de arquivos, onde é possível ver o status de assinatura de cada colaborador no documento enviado", "Solicitando relatório ao jurídico com prazo de 5 dias", "Conferindo o servidor de e-mails da empresa"], "correta": 1, "explicacao": "Na gestão de arquivos do Secullum, o supervisor visualiza o documento enviado com o status de cada colaborador — quem assinou, quem apenas visualizou e quem ainda não acessou. Esse controle facilita cobranças individuais e garante compliance em auditorias."}, {"id": 17, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "Um colaborador está de licença médica e precisa enviar o atestado ao RH com urgência, mas está em casa.", "pergunta": "Qual é a principal vantagem da gestão digital de documentos no Secullum nessa situação?", "opcoes": ["Documentos digitais podem ser alterados livremente sem rastreamento", "Não há vantagem — documentos físicos são mais aceitos pela Justiça do Trabalho", "O colaborador pode enviar o atestado de qualquer lugar pelo app, com segurança e rastreabilidade completa", "Documentos digitais têm validade de apenas 1 ano"], "correta": 2, "explicacao": "O Secullum permite o envio e recebimento de documentos de qualquer lugar, eliminando deslocamentos e burocracia física. Documentos digitais bem gerenciados têm validade legal plena, são armazenados com segurança e ficam disponíveis para consulta a qualquer momento."}, {"id": 18, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "Você nota que um colaborador está fazendo 3 horas extras diárias com frequência, sem banco de horas ou autorização formal.", "pergunta": "Qual é o limite máximo de horas extras diárias previsto na CLT?", "opcoes": ["4 horas", "2 horas", "3 horas", "Não há limite, desde que haja acordo escrito"], "correta": 1, "explicacao": "A CLT (art. 59) limita a 2 horas extras por dia. Exceder esse limite é irregular e pode gerar autuação do Ministério do Trabalho e passivos trabalhistas. O Secullum pode ser configurado para alertar supervisores quando jornadas se aproximam do limite."}, {"id": 19, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "Um colaborador trabalhou em um feriado nacional e não recebeu folga compensatória nem pagamento adicional.", "pergunta": "O que o supervisor deve providenciar?", "opcoes": ["Ignorar — cabe ao colaborador reclamar ao sindicato", "Garantir pagamento em dobro pelo dia trabalhado ou folga compensatória, conforme a legislação aplicável", "Considerar como contribuição voluntária do colaborador", "Aguardar a próxima convenção coletiva para regularizar"], "correta": 1, "explicacao": "Trabalho em feriado deve ser remunerado em dobro (Lei 605/49) ou compensado com folga, de acordo com a CCT aplicável. O supervisor deve registrar o dia no Secullum com a marcação correta de feriado para que o cálculo seja feito automaticamente na folha."}, {"id": 20, "modulo": "Módulo 5 — CLT & Jornada de Trabalho", "cenario": "Um colaborador com jornada de 8 horas propõe \"pular\" o almoço para poder sair mais cedo. Ele quer saber se é possível.", "pergunta": "Qual é a regra do intervalo intrajornada para jornadas superiores a 6 horas?", "opcoes": ["Opcional, se o colaborador concordar por escrito", "Mínimo de 30 minutos, podendo ser suprimido pelo supervisor", "Mínimo de 1 hora — redução exige acordo coletivo; supressão total é vedada", "Mínimo de 2 horas para garantir descanso adequado"], "correta": 2, "explicacao": "Para jornadas acima de 6 horas, a CLT exige intervalo mínimo de 1 hora (art. 71). Após a Reforma Trabalhista, a redução para até 30 minutos é possível apenas por convenção ou acordo coletivo. A supressão total é proibida e gera pagamento adicional de 50% sobre a hora. O Secullum registra e monitora esses intervalos."}];
+const QUESTOES = [{"id": 0, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "Um colaborador chega ao final do turno dizendo que esqueceu de bater o ponto de entrada pela manhã.", "pergunta": "Qual é o procedimento correto para o supervisor?", "opcoes": ["Ignorar — é responsabilidade exclusiva do colaborador", "Registrar o ajuste no sistema com o horário real e a justificativa", "Descontar automaticamente o dia completo de trabalho", "Aguardar o fechamento do mês para resolver com o RH"], "correta": 1, "explicacao": "O supervisor deve lançar o ajuste no Secullum informando o horário real e a justificativa. O sistema registra todo o histórico de alterações, garantindo transparência e conformidade com a Portaria 671, que exige rastreabilidade das marcações."}, {"id": 1, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "O reconhecimento facial falha repetidamente para o mesmo colaborador durante o turno.", "pergunta": "Qual é o primeiro passo que o supervisor deve tomar?", "opcoes": ["Substituir o equipamento imediatamente", "Dispensar o colaborador do registro de ponto por tempo indeterminado", "Verificar e, se necessário, atualizar o cadastro biométrico do colaborador no sistema", "Registrar uma reclamação formal no suporte sem investigar a causa"], "correta": 2, "explicacao": "Mudanças no rosto (barba, iluminação, óculos) podem afetar o reconhecimento. O supervisor deve verificar o cadastro biométrico no Secullum e solicitar recadastramento se necessário. Enquanto resolve, o colaborador pode utilizar registro alternativo autorizado pelo supervisor."}, {"id": 2, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "Um colaborador registrou saída no horário do intervalo, mas não registrou o retorno. O sistema indicou saída antecipada.", "pergunta": "Como o supervisor deve corrigir essa inconsistência?", "opcoes": ["Considerar que o colaborador saiu mais cedo e descontar as horas sem verificar", "Solicitar que o colaborador ajuste pelo app com justificativa, ou fazer o ajuste diretamente no sistema", "Aguardar o fechamento mensal sem intervir", "Aplicar advertência imediata sem apurar os fatos"], "correta": 1, "explicacao": "O Secullum permite ajustes de ponto com registro obrigatório de justificativa, mantendo a trilha de auditoria exigida pela legislação. O ajuste pode ser solicitado pelo colaborador via app ou feito diretamente pelo supervisor — em ambos os casos fica documentado."}, {"id": 3, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "A Portaria 671 do Ministério do Trabalho exige que o colaborador possa consultar suas marcações de ponto.", "pergunta": "Como o Secullum garante esse direito?", "opcoes": ["Enviando cópia impressa do espelho de ponto pelo correio todo mês", "Por meio da Central do Funcionário no aplicativo, com acesso em tempo real ao espelho de ponto", "Somente mediante solicitação formal ao RH, com prazo de 5 dias úteis", "Através de e-mail semanal com relatório de horas"], "correta": 1, "explicacao": "A Central do Funcionário do Secullum oferece ao colaborador acesso em tempo real ao espelho de ponto pelo app, cumprindo a Portaria 671 sem burocracia. O supervisor deve garantir que todos os colaboradores estejam cadastrados e saibam usar o aplicativo."}, {"id": 4, "modulo": "Módulo 1 — Controle de Ponto", "cenario": "Um colaborador reclama que trabalhou horas extras na semana passada e não recebeu o pagamento adicional.", "pergunta": "Qual deve ser o primeiro passo do supervisor?", "opcoes": ["Negar imediatamente, dizendo que o sistema não comete erros", "Verificar o espelho de ponto do colaborador no Secullum para confirmar as horas registradas", "Orientar o colaborador a resolver diretamente com o jurídico", "Aguardar o RH tomar a iniciativa de investigar"], "correta": 1, "explicacao": "O supervisor deve consultar o espelho de ponto do colaborador no Secullum para verificar se as horas extras foram registradas. Com os dados confirmados, encaminha ao RH para os acertos na folha. Agir com base nos registros do sistema evita conflitos e garante decisões justas."}, {"id": 5, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "Um colaborador recém-contratado diz que não consegue acessar o aplicativo do Secullum.", "pergunta": "Qual é o primeiro passo do supervisor para resolver?", "opcoes": ["Dizer que o colaborador precisa de um celular mais moderno", "Verificar se o colaborador foi cadastrado no sistema e se recebeu as credenciais de acesso", "Entrar em contato com a operadora de celular do colaborador", "Aguardar o TI resolver sem interferir"], "correta": 1, "explicacao": "Sem cadastro ativo no Secullum e credenciais enviadas, nenhum acesso é possível. O supervisor deve confirmar com o RH que o colaborador foi cadastrado e recebeu o usuário e senha. Somente depois, se o acesso ainda falhar, verificar questões técnicas do dispositivo."}, {"id": 6, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "Um colaborador percebeu um erro no seu registro de ponto e quer solicitar uma correção.", "pergunta": "Qual é o canal correto dentro do Secullum para essa solicitação?", "opcoes": ["Mensagem de WhatsApp para o supervisor, sem registro formal", "Pelo app da Central do Funcionário, onde a solicitação é registrada e vai para aprovação do supervisor", "E-mail direto ao RH, sem necessidade de usar o sistema", "Papel físico entregue ao gestor no fim do mês"], "correta": 1, "explicacao": "A solicitação de ajuste via app da Central do Funcionário cria um registro formal com data, hora e justificativa, protegendo tanto o colaborador quanto a empresa. O supervisor recebe a notificação e pode aprovar ou recusar com justificativa, mantendo a trilha de auditoria."}, {"id": 7, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "A empresa enviou um contrato digital para o colaborador assinar pelo app, mas ele não sabe como proceder.", "pergunta": "O que o supervisor deve orientar?", "opcoes": ["Solicitar que o colaborador vá presencialmente à sede para assinar o físico", "Acessar o app Secullum, ir à seção de documentos pendentes e realizar a assinatura eletrônica", "Informar que assinatura eletrônica não tem validade jurídica no Brasil", "Dizer que a assinatura é opcional"], "correta": 1, "explicacao": "A assinatura eletrônica pelo Secullum tem plena validade jurídica no Brasil (Lei 14.063/2020 e MP 2.200-2/2001). O supervisor deve orientar o colaborador a acessar \"Documentos pendentes\" no app e concluir a assinatura. O sistema registra identidade, data e hora do ato."}, {"id": 8, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "Um colaborador quer saber quantas horas extras acumulou neste mês.", "pergunta": "Onde essa informação está disponível?", "opcoes": ["Somente solicitando relatório por e-mail ao RH, com prazo de 3 dias úteis", "No relatório impresso entregue pelo supervisor ao final do mês", "No espelho de ponto disponível na Central do Funcionário no aplicativo, em tempo real", "Essa informação não é disponibilizada ao colaborador"], "correta": 2, "explicacao": "O colaborador acessa seu espelho de ponto em tempo real pela Central do Funcionário, onde vê todas as marcações e o saldo de horas. Esse acesso é garantido pela Portaria 671. O supervisor deve reforçar esse canal para evitar dúvidas e consultas desnecessárias ao RH."}, {"id": 9, "modulo": "Módulo 2 — Central do Funcionário & Acessos", "cenario": "Um colaborador trocou de celular e agora diz que perdeu acesso ao aplicativo Secullum.", "pergunta": "Como o supervisor deve orientar a recuperação do acesso?", "opcoes": ["O colaborador precisa adquirir um celular igual ao anterior", "Baixar o app no novo celular e fazer login com as mesmas credenciais (usuário e senha)", "Aguardar 30 dias para o sistema atualizar o dispositivo automaticamente", "Criar um novo cadastro do zero, pois o histórico fica vinculado ao celular"], "correta": 1, "explicacao": "As credenciais do Secullum estão vinculadas ao usuário, não ao aparelho. Basta instalar o app no novo celular e fazer login normalmente. Todo o histórico, documentos e dados ficam na nuvem e são acessíveis de qualquer dispositivo."}, {"id": 10, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Ao analisar o sistema, você percebe que um colaborador está a 60 dias de perder o período aquisitivo de férias sem programação definida.", "pergunta": "O que o supervisor deve fazer?", "opcoes": ["Aguardar o colaborador perceber por conta própria", "Verificar no Secullum e comunicar o RH para programar as férias dentro do prazo legal", "Ignorar — controle de férias é responsabilidade exclusiva do RH", "Cancelar automaticamente as férias para o período seguinte"], "correta": 1, "explicacao": "Férias não concedidas no prazo legal geram multa de 1/3 sobre o valor. O Secullum sinaliza vencimentos próximos, mas o supervisor tem papel ativo em garantir que a equipe tire férias a tempo. Acione o RH assim que identificar o risco."}, {"id": 11, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Dois colaboradores do mesmo setor solicitaram férias para o mesmo período, e a operação não suporta a ausência de ambos.", "pergunta": "Como o supervisor deve conduzir essa situação?", "opcoes": ["Dar preferência ao colaborador com maior salário, sem critério objetivo", "Consultar o sistema para ter visão completa dos saldos e negociar com ambos conforme a necessidade operacional", "Negar automaticamente as férias de ambos", "Sortear entre os dois"], "correta": 1, "explicacao": "A CLT permite ao empregador determinar a época das férias. O supervisor deve usar o Secullum para visualizar os saldos e períodos aquisitivos, depois negociar com os colaboradores um escalonamento que preserve a operação. Transparência evita conflitos e reclamações trabalhistas."}, {"id": 12, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Um colaborador quer saber quando deverá ser notificado formalmente sobre o início das suas férias.", "pergunta": "Qual é o prazo mínimo de antecedência para o aviso de férias, segundo a CLT?", "opcoes": ["15 dias", "7 dias", "30 dias", "60 dias"], "correta": 2, "explicacao": "A CLT exige aviso de férias com no mínimo 30 dias de antecedência (art. 135). O descumprimento desse prazo pode gerar obrigação de pagar férias em dobro. O Secullum ajuda o supervisor a controlar essas datas automaticamente, evitando exposição trabalhista."}, {"id": 13, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Um colaborador solicita fracionar seus 30 dias de férias em três períodos distintos ao longo do ano.", "pergunta": "O supervisor pode aprovar essa solicitação?", "opcoes": ["Não — a CLT exige um único período contínuo de férias", "Sim — desde que o colaborador concorde e um dos períodos seja de no mínimo 14 dias corridos", "Sim — sem nenhuma restrição de prazo mínimo para cada período", "Somente com autorização por escrito da diretoria e do sindicato"], "correta": 1, "explicacao": "A Reforma Trabalhista (Lei 13.467/2017) permite fracionamento em até 3 períodos, desde que haja acordo e que um deles seja de no mínimo 14 dias corridos, não podendo os demais ser inferiores a 5 dias. O Secullum suporta o controle fracionado automaticamente."}, {"id": 14, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Um colaborador com 30 dias de férias a gozar quer \"vender\" 10 dias em dinheiro (abono pecuniário).", "pergunta": "Essa solicitação pode ser aprovada?", "opcoes": ["Não — a venda de dias de férias não é permitida pela CLT", "Sim — o colaborador pode converter em abono até 1/3 do período de férias", "Sim — pode converter qualquer quantidade de dias", "Somente se houver cláusula específica na convenção coletiva"], "correta": 1, "explicacao": "A CLT permite ao colaborador solicitar o abono de até 1/3 das férias (art. 143). Com 30 dias de férias, pode converter até 10 dias em dinheiro. O pedido deve ser feito até 15 dias antes do término do período aquisitivo. O Secullum automatiza esse cálculo na folha de pagamento."}, {"id": 15, "modulo": "Módulo 3 — Controle de Férias & CLT", "cenario": "Um colaborador afirma não ter recebido um documento importante que o RH diz ter enviado pelo sistema.", "pergunta": "Como verificar quem está correto?", "opcoes": ["Acreditar no colaborador e reenviar imediatamente sem verificar", "Consultar no Secullum o status do documento: se foi enviado, visualizado ou assinado, com data e hora", "Solicitar que o colaborador procure na caixa de spam do e-mail pessoal", "Não é possível verificar — o sistema não registra o recebimento"], "correta": 1, "explicacao": "O Secullum mantém registro completo de todos os documentos: data de envio, leitura e assinatura. O supervisor pode apresentar esses logs ao colaborador, resolvendo a divergência com evidências objetivas e evitando conflitos."}, {"id": 16, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "O RH disponibilizou os holerites do mês no Secullum. Um colaborador diz que não sabe onde encontrar.", "pergunta": "Como o supervisor deve orientar?", "opcoes": ["Imprimir e entregar o holerite pessoalmente", "Reenviar por WhatsApp", "Orientar o colaborador a acessar a Central do Funcionário no app, onde os holerites estão disponíveis", "Informar que só pode ser acessado no computador da empresa"], "correta": 2, "explicacao": "Os holerites e documentos disponibilizados pelo Secullum ficam acessíveis para o colaborador direto no app, na Central do Funcionário. O supervisor pode verificar na plataforma quais colaboradores já visualizaram o documento, garantindo rastreabilidade."}, {"id": 17, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "Um colaborador questiona se o contrato assinado pelo app tem a mesma validade de um contrato em papel com assinatura física.", "pergunta": "O que o supervisor deve responder?", "opcoes": ["Que documentos eletrônicos têm validade reduzida e precisam ser impressos depois", "Que assinatura eletrônica não é aceita em contratos trabalhistas", "Que a assinatura eletrônica tem plena validade jurídica, com identificação, data e hora registradas", "Que a validade depende de validação manual pelo departamento jurídico"], "correta": 2, "explicacao": "As assinaturas eletrônicas no Secullum têm plena validade jurídica no Brasil (MP 2.200-2/2001, Lei 14.063/2020). O sistema registra a identidade do signatário, o dispositivo, a data e a hora — criando uma trilha de auditoria robusta, aceita pela Justiça do Trabalho."}, {"id": 18, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "O supervisor precisa verificar quais colaboradores ainda não assinaram o novo termo de ciência sobre a política de horas extras.", "pergunta": "Onde encontrar essa informação no Secullum?", "opcoes": ["O sistema não armazena esse histórico", "Na gestão de arquivos, onde é possível ver o status de assinatura de cada colaborador no documento enviado", "Solicitando relatório ao jurídico com prazo de 5 dias", "Conferindo o servidor de e-mails da empresa"], "correta": 1, "explicacao": "Na gestão de arquivos do Secullum, o supervisor visualiza o documento enviado com o status de cada colaborador — quem assinou, quem apenas visualizou e quem ainda não acessou. Esse controle facilita cobranças individuais e garante compliance em auditorias."}, {"id": 19, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "Um colaborador está de licença médica e precisa enviar o atestado ao RH com urgência, mas está em casa.", "pergunta": "Qual é a principal vantagem da gestão digital de documentos no Secullum nessa situação?", "opcoes": ["Documentos digitais podem ser alterados livremente sem rastreamento", "Não há vantagem — documentos físicos são mais aceitos pela Justiça do Trabalho", "O colaborador pode enviar o atestado de qualquer lugar pelo app, com segurança e rastreabilidade completa", "Documentos digitais têm validade de apenas 1 ano"], "correta": 2, "explicacao": "O Secullum permite o envio e recebimento de documentos de qualquer lugar, eliminando deslocamentos e burocracia física. Documentos digitais bem gerenciados têm validade legal plena, são armazenados com segurança e ficam disponíveis para consulta a qualquer momento."}, {"id": 20, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "Você nota que um colaborador está fazendo 3 horas extras diárias com frequência, sem banco de horas ou autorização formal.", "pergunta": "Qual é o limite máximo de horas extras diárias previsto na CLT?", "opcoes": ["4 horas", "2 horas", "3 horas", "Não há limite, desde que haja acordo escrito"], "correta": 1, "explicacao": "A CLT (art. 59) limita a 2 horas extras por dia. Exceder esse limite é irregular e pode gerar autuação do Ministério do Trabalho e passivos trabalhistas. O Secullum pode ser configurado para alertar supervisores quando jornadas se aproximam do limite."}, {"id": 21, "modulo": "Módulo 4 — Gestão de Documentos Digitais", "cenario": "Um colaborador trabalhou em um feriado nacional e não recebeu folga compensatória nem pagamento adicional.", "pergunta": "O que o supervisor deve providenciar?", "opcoes": ["Ignorar — cabe ao colaborador reclamar ao sindicato", "Garantir pagamento em dobro pelo dia trabalhado ou folga compensatória, conforme a legislação aplicável", "Considerar como contribuição voluntária do colaborador", "Aguardar a próxima convenção coletiva para regularizar"], "correta": 1, "explicacao": "Trabalho em feriado deve ser remunerado em dobro (Lei 605/49) ou compensado com folga, de acordo com a CCT aplicável. O supervisor deve registrar o dia no Secullum com a marcação correta de feriado para que o cálculo seja feito automaticamente na folha."}, {"id": 22, "modulo": "Módulo 5 — CLT & Jornada de Trabalho", "cenario": "Um colaborador com jornada de 8 horas propõe \"pular\" o almoço para poder sair mais cedo. Ele quer saber se é possível.", "pergunta": "Qual é a regra do intervalo intrajornada para jornadas superiores a 6 horas?", "opcoes": ["Opcional, se o colaborador concordar por escrito", "Mínimo de 30 minutos, podendo ser suprimido pelo supervisor", "Mínimo de 1 hora — redução exige acordo coletivo; supressão total é vedada", "Mínimo de 2 horas para garantir descanso adequado"], "correta": 2, "explicacao": "Para jornadas acima de 6 horas, a CLT exige intervalo mínimo de 1 hora (art. 71). Após a Reforma Trabalhista, a redução para até 30 minutos é possível apenas por convenção ou acordo coletivo. A supressão total é proibida e gera pagamento adicional de 50% sobre a hora. O Secullum registra e monitora esses intervalos."}, {"id": 23, "modulo": "Módulo 5 — CLT & Jornada de Trabalho", "cenario": "Auditando o ponto, você percebe que um colaborador em escala 12×36 registrou 14 horas trabalhadas em um turno.", "pergunta": "Como o supervisor deve agir?", "opcoes": ["Verificar o motivo das horas excedentes e acionar o RH para garantir a compensação ou pagamento devido", "Considerar normal, pois escalas 12×36 são flexíveis", "Descontar as 2 horas excedentes automaticamente sem comunicar o colaborador", "Aguardar o colaborador reclamar antes de qualquer ação"], "correta": 0, "explicacao": "Na escala 12×36, horas além das 12h regulares são extras e precisam ser remuneradas ou compensadas. O supervisor deve apurar o motivo (necessidade operacional, erro de registro) e comunicar o RH para garantir o pagamento correto. O Secullum gera alertas para jornadas que excedem o configurado."}, {"id": 24, "modulo": "Módulo 5 — CLT & Jornada de Trabalho", "cenario": "A empresa quer implementar banco de horas. Um colaborador pergunta como funciona e quais são seus direitos.", "pergunta": "Qual afirmação sobre banco de horas está correta após a Reforma Trabalhista de 2017?", "opcoes": ["Pode ser instituído por acordo individual escrito, com compensação em até 6 meses", "Só é válido por convenção coletiva, sem limite de prazo para compensação", "Permite acúmulo ilimitado de horas sem prazo definido", "Elimina completamente o pagamento de horas extras"], "correta": 0, "explicacao": "Após a Reforma Trabalhista, o banco de horas pode ser acordado individualmente por escrito (prazo de compensação: até 6 meses) ou por convenção coletiva (até 1 ano). O Secullum gerencia automaticamente os saldos de cada colaborador, facilitando o acompanhamento pelo supervisor e evitando passivos."}];
 const LETRAS = ["A","B","C","D","E"];
+
+// Labels curtos das abas de módulo (na ordem em que aparecem)
+const MOD_LABELS = {
+  "Módulo 1 — Controle de Ponto": "Ponto",
+  "Módulo 2 — Central do Funcionário & Acessos": "App do Funcionário",
+  "Módulo 3 — Controle de Férias & CLT": "Férias",
+  "Módulo 4 — Gestão de Documentos Digitais": "Documentos",
+  "Módulo 5 — CLT & Jornada de Trabalho": "CLT & Conformidade"
+};
+// Ordem única dos módulos conforme as questões
+const MOD_ORDER = QUESTOES.reduce((a,q)=>{ if(!a.includes(q.modulo)) a.push(q.modulo); return a; },[]);
+
+function moduloConcluido(modNome){
+  // concluído = já passou por todas as questões daquele módulo
+  const idxs = QUESTOES.map((q,i)=>q.modulo===modNome?i:-1).filter(i=>i>=0);
+  return idxs.every(i=> i < idx);
+}
+
+function renderModbar(){
+  const atual = QUESTOES[idx] ? QUESTOES[idx].modulo : null;
+  const html = MOD_ORDER.map(m=>{
+    const label = MOD_LABELS[m] || m;
+    const active = (m===atual);
+    const done = moduloConcluido(m);
+    let cls = "modtab";
+    if(active) cls += " active";
+    else if(done) cls += " done";
+    const check = done ? ' <span class="check">✓</span>' : '';
+    return '<div class="'+cls+'">'+esc(label)+check+'</div>';
+  }).join("");
+  $("#modbarInner").innerHTML = html;
+  // rola a aba ativa para a vista
+  const activeEl = document.querySelector("#modbarInner .modtab.active");
+  if(activeEl) activeEl.scrollIntoView({inline:"center", block:"nearest", behavior:"smooth"});
+}
 
 let idx = 0, acertos = 0, answered = false;
 let usuario = {nome:"", email:""};
 let respostas = [];
+let acertoPorQuestao = {};
 
 const $ = s => document.querySelector(s);
 
@@ -233,6 +304,7 @@ $("#startBtn").addEventListener("click", () => {
   usuario = {nome, email};
   $("#screen-start").classList.add("hide");
   $("#screen-quiz").classList.remove("hide");
+  $("#modbar").classList.remove("hide");
   render();
 });
 
@@ -240,6 +312,7 @@ $("#startBtn").addEventListener("click", () => {
 function render(){
   answered = false;
   const q = QUESTOES[idx];
+  renderModbar();
   $("#bar").style.width = ((idx)/QUESTOES.length*100)+"%";
   $("#pnum").textContent = "Questão "+(idx+1)+" de "+QUESTOES.length;
   $("#phits").textContent = acertos+" acerto"+(acertos===1?"":"s");
@@ -279,6 +352,7 @@ function choose(i){
     correta:LETRAS[q.correta]+") "+q.opcoes[q.correta],
     acertou:acertou
   });
+  acertoPorQuestao[idx] = acertou;
 
   document.querySelectorAll("#opts .opt").forEach(el=>{
     el.classList.add("locked");
@@ -298,13 +372,80 @@ function choose(i){
 
 $("#nextBtn").addEventListener("click", ()=>{
   if(!answered) return;
-  if(idx < QUESTOES.length-1){ idx++; render(); window.scrollTo({top:0,behavior:"smooth"}); }
-  else finish();
+  const modAtual = QUESTOES[idx].modulo;
+  const ehUltima = (idx === QUESTOES.length-1);
+  const proxMudaModulo = !ehUltima && QUESTOES[idx+1].modulo !== modAtual;
+
+  if(ehUltima || proxMudaModulo){
+    // terminou um módulo -> mostrar tela intermediária
+    showModuleResult(modAtual, ehUltima);
+  } else {
+    idx++; render(); window.scrollTo({top:0,behavior:"smooth"});
+  }
 });
+
+// índices das questões de um módulo
+function indicesDoModulo(modNome){
+  return QUESTOES.map((q,i)=>q.modulo===modNome?i:-1).filter(i=>i>=0);
+}
+
+// ---- Tela intermediária de módulo ----
+function showModuleResult(modNome, ehUltimaGeral){
+  const idxs = indicesDoModulo(modNome);
+  const totalMod = idxs.length;
+  const acertosMod = idxs.filter(i=>acertoPorQuestao[i]).length;
+  const pct = Math.round(acertosMod/totalMod*100);
+  const circ = 414.7;
+
+  $("#screen-quiz").classList.add("hide");
+  $("#screen-module").classList.remove("hide");
+  window.scrollTo({top:0,behavior:"smooth"});
+
+  // progresso geral no topo
+  $("#mbar").style.width = ((idx+1)/QUESTOES.length*100)+"%";
+  const modNum = MOD_ORDER.indexOf(modNome)+1;
+  $("#mpnum").textContent = "Módulo "+modNum+" de "+MOD_ORDER.length+" concluído";
+  $("#mphits").textContent = acertosMod+" acerto"+(acertosMod===1?"":"s");
+
+  $("#mpct").textContent = pct+"%";
+  $("#mfrac").textContent = acertosMod+"/"+totalMod+" acertos";
+  $("#mringfg").style.strokeDashoffset = circ-(circ*pct/100);
+
+  let title,msg,color;
+  if(pct>=80){title="Módulo dominado!";msg="Ótimo desempenho neste módulo. Você está pronto para orientar a equipe.";color="#2fae5c";}
+  else if(pct>=60){title="Atenção necessária";msg="Há pontos importantes a revisar. Consulte o manual do Secullum e converse com o RH.";color="#f5a623";}
+  else{title="Reforço recomendado";msg="Revise este módulo com atenção antes de orientar colaboradores sobre esses tópicos.";color="#e0556a";}
+  $("#mtitle").textContent = title;
+  $("#mmsg").textContent = msg;
+  $("#mringfg").setAttribute("stroke",color);
+
+  // bolinhas verde/vermelho por questão do módulo
+  $("#mdots").innerHTML = idxs.map(i=>{
+    const ok = acertoPorQuestao[i];
+    const c = ok ? "#2fae5c" : "#e0556a";
+    return '<span style="width:10px;height:10px;border-radius:50%;background:'+c+';display:inline-block"></span>';
+  }).join("");
+
+  // botão principal: próximo módulo OU resultado final
+  const btn = $("#mNextBtn");
+  btn.textContent = ehUltimaGeral ? "Ver resultado final" : "Próximo módulo →";
+  btn.onclick = ()=>{
+    $("#screen-module").classList.add("hide");
+    if(ehUltimaGeral){
+      finish();
+    } else {
+      idx++;
+      $("#screen-quiz").classList.remove("hide");
+      render();
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+  };
+}
 
 // ---- Resultado ----
 function finish(){
   $("#screen-quiz").classList.add("hide");
+  $("#modbar").classList.add("hide");
   $("#screen-result").classList.remove("hide");
   window.scrollTo({top:0,behavior:"smooth"});
 
@@ -364,14 +505,6 @@ function enviar(pct){
     s.textContent="\u2717 Falha no envio. As respostas ficaram salvas neste navegador.";
   });
 }
-
-$("#retryBtn").addEventListener("click", ()=>{
-  idx=0;acertos=0;answered=false;respostas=[];
-  $("#screen-result").classList.add("hide");
-  $("#screen-start").classList.remove("hide");
-  $("#scoretag").textContent="";
-  window.scrollTo({top:0,behavior:"smooth"});
-});
 
 // ---- Admin ----
 $("#adminOpen").addEventListener("click",e=>{e.preventDefault();$("#adminModal").classList.add("show");});
