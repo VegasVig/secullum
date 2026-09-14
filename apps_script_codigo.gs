@@ -113,7 +113,7 @@ function testeManual() {
   enviarEmail({
     nome: "Fulano Teste", email: "fulano@teste.com",
     data: new Date().toLocaleString("pt-BR"),
-    acertos: 3, total: 21, percentual: 14,
+    acertos: 3, total: 24, percentual: 13,
     respostas: [
       { modulo: "Módulo 1", pergunta: "Pergunta de teste?", escolha: "A) opção", correta: "B) certa", acertou: false }
     ]
